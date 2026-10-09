@@ -42,6 +42,8 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs["core-web-vitals"].rules,
+      // Links to /api/* downloads and the Auth.js sign-out endpoint are intentional full navigations.
+      "@next/next/no-html-link-for-pages": "off",
     },
   },
   {

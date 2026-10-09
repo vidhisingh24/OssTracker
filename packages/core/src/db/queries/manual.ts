@@ -179,14 +179,12 @@ export async function createPlanned(
     ghCreatedAt: now,
     lastActivityAt: now,
   });
-  await db
-    .insert(userMeta)
-    .values({
-      itemId: id,
-      notes: input.notes ?? null,
-      tags: input.tags ?? [],
-      priority: input.priority ?? null,
-    });
+  await db.insert(userMeta).values({
+    itemId: id,
+    notes: input.notes ?? null,
+    tags: input.tags ?? [],
+    priority: input.priority ?? null,
+  });
   return id;
 }
 

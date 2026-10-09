@@ -132,15 +132,13 @@ export async function dispatchPending(db: Db, now = new Date()): Promise<number>
         sent++;
       } catch (err) {
         logger.warn({ err, channel: c }, "notification send failed");
-        await db
-          .insert(outboundPings)
-          .values({
-            channel: c,
-            kind: "event",
-            eventIds: [p.e.id],
-            status: "failed",
-            error: (err as Error).message,
-          });
+        await db.insert(outboundPings).values({
+          channel: c,
+          kind: "event",
+          eventIds: [p.e.id],
+          status: "failed",
+          error: (err as Error).message,
+        });
       }
     }
   }

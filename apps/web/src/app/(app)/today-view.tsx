@@ -30,18 +30,18 @@ export function TodayView() {
   const { user } = useApp();
   const firstName = (user.name ?? user.login).split(" ")[0];
   const [hello, setHello] = React.useState("Hello");
-  React.useEffect(() => setHello(greeting()), []);
+  const [dateLine, setDateLine] = React.useState(" ");
+  React.useEffect(() => {
+    setHello(greeting());
+    setDateLine(
+      new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }),
+    );
+  }, []);
 
   return (
     <div className="space-y-8">
       <section className="hero-surface border-line -mx-4 rounded-none border-b px-4 pt-2 pb-7 sm:mx-0 sm:rounded-[20px] sm:border sm:px-8 sm:pt-7">
-        <p className="text-accent-fg text-[13px] font-medium">
-          {new Date().toLocaleDateString(undefined, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        </p>
+        <p className="text-accent-fg text-[13px] font-medium">{dateLine}</p>
         <h1 className="mt-1 text-[28px] font-semibold tracking-[-0.025em] sm:text-[34px]">
           {hello}, {firstName}.
         </h1>

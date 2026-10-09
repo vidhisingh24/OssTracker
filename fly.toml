@@ -1,0 +1,32 @@
+# Example Fly.io config. Create a Postgres (fly postgres create) and attach it, then:
+#   fly secrets set AUTH_GITHUB_ID=... AUTH_GITHUB_SECRET=... AUTH_SECRET=... TOKEN_ENCRYPTION_KEY=... APP_URL=https://<app>.fly.dev
+#   fly deploy
+app = "contrib-vidhi"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+  build-target = "web"
+
+[env]
+  NODE_ENV = "production"
+  ALLOWED_GITHUB_LOGIN = "vidhisingh24"
+
+[processes]
+  web = "node apps/web/server.js"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+  processes = ["web"]
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/api/health"
+
+# Worker: deploy the same repo as a second app with build-target = "worker"
+# (fly deploy --config fly.worker.toml), or run it on any VPS via docker compose.
