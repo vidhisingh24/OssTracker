@@ -1,0 +1,10 @@
+node_modules
+.next
+dist
+coverage
+pnpm-lock.yaml
+packages/core/drizzle
+playwright-report
+test-results
+.data
+*.woff2
