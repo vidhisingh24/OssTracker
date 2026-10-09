@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
@@ -53,6 +53,25 @@ export function findMigrationsFolder(): string {
 }
 
 /** Open a database connection. Does not migrate; call `migrateDb` (or use `getDb`, which does both). */
+/**
+ * Load PGlite's wasm + fs bundle explicitly. Inside bundlers (Next.js) PGlite's own
+ * `new URL(..., import.meta.url)` lookup breaks, so we hand it the bytes.
+ */
+function pgliteAssets(): { wasmModule?: WebAssembly.Module; fsBundle?: Blob } {
+  const candidates = [
+    process.env.PGLITE_ASSETS_DIR,
+    path.join(findRepoRoot(), "packages/core/node_modules/@electric-sql/pglite/dist"),
+    path.join(findRepoRoot(), "node_modules/@electric-sql/pglite/dist"),
+    path.join(process.cwd(), "node_modules/@electric-sql/pglite/dist"),
+  ].filter((p): p is string => Boolean(p));
+  const dir = candidates.find((d) => existsSync(path.join(d, "pglite.wasm")));
+  if (!dir) return {};
+  return {
+    wasmModule: new WebAssembly.Module(readFileSync(path.join(dir, "pglite.wasm"))),
+    fsBundle: new Blob([readFileSync(path.join(dir, "pglite.data"))]),
+  };
+}
+
 export function openDb(opts: { url?: string; pgliteDir?: string } = {}): Omit<DbHandle, "ready"> {
   if (opts.url) {
     const pool = new pg.Pool({ connectionString: opts.url, max: 10, idleTimeoutMillis: 30_000 });
@@ -62,7 +81,7 @@ export function openDb(opts: { url?: string; pgliteDir?: string } = {}): Omit<Db
   }
   const dir = opts.pgliteDir ?? path.join(findRepoRoot(), ".data", "pglite");
   if (dir !== "memory://") mkdirSync(dir, { recursive: true });
-  const client = new PGlite(dir === "memory://" ? undefined : dir);
+  const client = new PGlite(dir === "memory://" ? undefined : dir, pgliteAssets());
   const db = drizzlePglite(client, { schema }) as unknown as Db;
   return { db, driver: "pglite", close: () => client.close() };
 }

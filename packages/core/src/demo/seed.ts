@@ -548,14 +548,12 @@ export async function seedDemo(
       rateRemaining: 4950,
     },
   );
-  await db
-    .insert(syncRuns)
-    .values(
-      runs.map((r) => ({
-        ...r,
-        progress: { phase: "done", done: r.itemsTouched ?? 0, total: r.itemsTouched ?? 0 },
-      })),
-    );
+  await db.insert(syncRuns).values(
+    runs.map((r) => ({
+      ...r,
+      progress: { phase: "done", done: r.itemsTouched ?? 0, total: r.itemsTouched ?? 0 },
+    })),
+  );
 
   await db.insert(rateLimits).values([
     {

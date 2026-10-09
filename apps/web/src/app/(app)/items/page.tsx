@@ -1,7 +1,12 @@
-import { PageHeader } from "@/components/page-header";
+import { Suspense } from "react";
+import { ItemsTable } from "./items-table";
 
 export const metadata = { title: "All items" };
 
 export default function Page() {
-  return <PageHeader title="All items" description="Everything you are involved in." />;
+  return (
+    <Suspense>
+      <ItemsTable />
+    </Suspense>
+  );
 }

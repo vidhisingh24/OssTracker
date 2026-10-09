@@ -36,7 +36,7 @@ const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ["@contrib/core"],
-  serverExternalPackages: ["@electric-sql/pglite", "pg-boss", "pino", "pg"],
+  serverExternalPackages: ["@electric-sql/pglite", "drizzle-orm", "pg-boss", "pino", "pg"],
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
   images: { remotePatterns: [{ protocol: "https", hostname: "avatars.githubusercontent.com" }] },

@@ -1,7 +1,12 @@
-import { PageHeader } from "@/components/page-header";
+import { Suspense } from "react";
+import { PipelineBoard } from "./board";
 
 export const metadata = { title: "Pipeline" };
 
 export default function Page() {
-  return <PageHeader title="Pipeline" description="Every item by stage." />;
+  return (
+    <Suspense>
+      <PipelineBoard />
+    </Suspense>
+  );
 }

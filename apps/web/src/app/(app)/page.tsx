@@ -1,12 +1,7 @@
-import { PageHeader } from "@/components/page-header";
+import { TodayView } from "./today-view";
 
 export const metadata = { title: "Today" };
 
 export default function Page() {
-  return (
-    <PageHeader
-      title="Today"
-      description="What needs you, what is waiting on others, and what changed."
-    />
-  );
+  return <TodayView />;
 }

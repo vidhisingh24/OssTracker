@@ -362,9 +362,9 @@ export function computeAttention(
   return { score, reasons };
 }
 
-/** Reasons that put an item in the "Needs you" queue (approved_unmerged and stale pings are informational). */
+/** Reasons that put an item in the "Needs you" queue (approvals and ping suggestions are informational). */
 export function needsYou(reasons: AttentionReason[]): boolean {
-  return reasons.some((r) => r.code !== "approved_unmerged");
+  return reasons.some((r) => r.code !== "approved_unmerged" && r.code !== "stale_ping");
 }
 
 /* ───────────────────────── Next action ───────────────────────── */

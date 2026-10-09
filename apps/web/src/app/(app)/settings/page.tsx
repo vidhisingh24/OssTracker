@@ -1,7 +1,7 @@
-import { PageHeader } from "@/components/page-header";
+import { SettingsView } from "./settings-view";
 
 export const metadata = { title: "Settings" };
 
 export default function Page() {
-  return <PageHeader title="Settings" description="Connection, sync and preferences." />;
+  return <SettingsView />;
 }
