@@ -24,7 +24,7 @@ export const GET = api(async ({ db, req }) => {
   return {
     ...status,
     runs,
-    mode: env.isDemo ? "demo" : env.dbDriver === "postgres" ? "worker" : "inline",
+    mode: env.isDemo ? "demo" : env.syncMode,
   };
 });
 

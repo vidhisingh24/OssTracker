@@ -9,9 +9,11 @@ import { GitHubClient, getGithubToken } from "@contrib/core/github";
 import { recordRate, resolveNumber, runDemoSync, runSync, type SyncKind } from "@contrib/core/sync";
 import { parseGithubUrl } from "@contrib/core/queries";
 import { getSettings } from "@contrib/core/db";
+import { after } from "next/server";
+import { dispatchPending } from "@contrib/core/notify";
 import { HttpError } from "./api";
 
-/** Start a sync: demo → simulated; Postgres → queued for the worker; PGlite → run in-process. */
+/** Start a sync: demo → simulated; worker mode → queued; inline (Vercel) → runs after the response. */
 export async function triggerSync(
   db: Db,
   kind: Exclude<SyncKind, "demo">,
@@ -19,7 +21,7 @@ export async function triggerSync(
 ): Promise<{ runId?: string; queued?: boolean }> {
   const env = getEnv();
   if (env.isDemo) return { runId: await runDemoSync(db, "manual") };
-  if (env.dbDriver === "postgres") {
+  if (env.syncMode === "worker") {
     const { enqueue } = await import("@contrib/core/queue");
     await enqueue(
       kind === "item" ? "sync.item" : (`sync.${kind}` as "sync.hot"),
@@ -28,8 +30,11 @@ export async function triggerSync(
     );
     return { queued: true };
   }
-  void runSync(db, kind, { trigger: "manual", itemIds: opts.itemIds }).catch((err: unknown) =>
-    logger.error({ err }, "inline sync failed"),
+  // `after` keeps the serverless function alive until the sync finishes.
+  after(() =>
+    runSync(db, kind, { trigger: "manual", itemIds: opts.itemIds })
+      .then(() => dispatchPending(db))
+      .catch((err: unknown) => logger.error({ err }, "inline sync failed")),
   );
   return { queued: false };
 }

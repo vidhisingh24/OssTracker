@@ -43,3 +43,4 @@ One line each: decision — why.
 - Worker runs TypeScript via `tsx` in Docker (no separate build) — simpler, fine for a single long-running process.
 - Fonts subset to Latin.
 - Insights charts: Recharts for bar charts, hand-drawn SVG for the heatmap (no extra dependency, exact token colors).
+- Serverless hosting (Vercel + Neon): `SYNC_MODE=inline` (auto when `VERCEL` is set) runs sync via Next's `after()` and a secret-protected `/api/cron/sync`, called every 10 min by a scheduled GitHub Action — free, no worker process; Vercel Hobby cron is limited to daily.

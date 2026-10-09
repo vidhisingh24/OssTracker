@@ -1,0 +1,23 @@
+name: Scheduled sync
+
+# Calls the deployed app every 10 minutes so GitHub data stays fresh even when the site is closed.
+# Setup: repo Settings → Secrets and variables → Actions:
+#   APP_URL      = https://<your-app>.vercel.app
+#   CRON_SECRET  = same value as CRON_SECRET in Vercel env
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Trigger sync
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then echo "APP_URL / CRON_SECRET secrets not set, skipping"; exit 0; fi
+          curl -fsS --max-time 320 -X POST -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/sync"

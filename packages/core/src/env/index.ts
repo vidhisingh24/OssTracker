@@ -35,6 +35,14 @@ const envSchema = z
 
     DEMO_MODE: bool,
 
+    /** `worker` = pg-boss worker process; `inline` = serverless (Vercel), sync runs in the request / cron call. */
+    SYNC_MODE: z.preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.enum(["worker", "inline"]).optional(),
+    ),
+    /** Shared secret for the scheduled sync endpoint (`/api/cron/sync`). */
+    CRON_SECRET: optionalString,
+
     WEBHOOKS_ENABLED: bool,
     GITHUB_WEBHOOK_SECRET: optionalString,
 
@@ -101,6 +109,7 @@ export interface Env extends RawEnv {
   /** Which database driver backs this process. */
   dbDriver: "postgres" | "pglite";
   githubScopes: string[];
+  syncMode: "worker" | "inline";
 }
 
 export function decodeKey(value: string): Buffer | null {
@@ -133,6 +142,7 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
     authEnabled,
     dbDriver: raw.DATABASE_URL ? "postgres" : "pglite",
     githubScopes: ["read:user", "notifications", raw.GITHUB_PRIVATE_REPOS ? "repo" : "public_repo"],
+    syncMode: raw.SYNC_MODE ?? (source.VERCEL || !raw.DATABASE_URL ? "inline" : "worker"),
   };
 }
 

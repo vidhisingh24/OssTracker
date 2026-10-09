@@ -50,9 +50,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             scopes: account.scope ?? null,
           });
           logger.info({ login: profile.login, scopes: account.scope }, "GitHub account connected");
-          const { enqueue } = await import("@contrib/core/queue");
-          await enqueue("sync.cold", { trigger: "login" }).catch((err: unknown) =>
-            logger.warn({ err }, "could not enqueue initial sync"),
+          const { triggerSync } = await import("./sync");
+          await triggerSync(db, "cold").catch((err: unknown) =>
+            logger.warn({ err }, "could not start initial sync"),
           );
         }
       }
