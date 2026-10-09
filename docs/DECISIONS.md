@@ -44,3 +44,4 @@ One line each: decision — why.
 - Fonts subset to Latin.
 - Insights charts: Recharts for bar charts, hand-drawn SVG for the heatmap (no extra dependency, exact token colors).
 - Serverless hosting (Vercel + Neon): `SYNC_MODE=inline` (auto when `VERCEL` is set) runs sync via Next's `after()` and a secret-protected `/api/cron/sync`, called every 10 min by a scheduled GitHub Action — free, no worker process; Vercel Hobby cron is limited to daily.
+- Remote Postgres uses TLS without chain verification by default (Supabase/Neon chains aren't in Node's trust store); set `sslmode=verify-full` to verify. Supabase: use the Session pooler (5432) — migrations use a session advisory lock.

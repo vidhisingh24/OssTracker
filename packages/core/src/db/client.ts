@@ -52,6 +52,21 @@ export function findMigrationsFolder(): string {
   return found;
 }
 
+/**
+ * Hosted Postgres (Supabase, Neon) requires TLS. Their certificate chains aren't in Node's default
+ * trust store, so `sslmode=require` would fail verification in node-postgres. Remote hosts get
+ * encrypted connections without chain verification unless `sslmode=verify-full` is set explicitly.
+ */
+export function poolSsl(url: string): pg.PoolConfig {
+  const u = new URL(url);
+  const local = ["localhost", "127.0.0.1", "::1", "postgres", "db"].includes(u.hostname);
+  const mode = u.searchParams.get("sslmode");
+  if (local || mode === "disable") return { connectionString: url };
+  if (mode === "verify-full") return { connectionString: url, ssl: { rejectUnauthorized: true } };
+  u.searchParams.delete("sslmode");
+  return { connectionString: u.toString(), ssl: { rejectUnauthorized: false } };
+}
+
 /** Open a database connection. Does not migrate; call `migrateDb` (or use `getDb`, which does both). */
 /**
  * Load PGlite's wasm + fs bundle explicitly. Inside bundlers (Next.js) PGlite's own
@@ -74,7 +89,7 @@ function pgliteAssets(): { wasmModule?: WebAssembly.Module; fsBundle?: Blob } {
 
 export function openDb(opts: { url?: string; pgliteDir?: string } = {}): Omit<DbHandle, "ready"> {
   if (opts.url) {
-    const pool = new pg.Pool({ connectionString: opts.url, max: 10, idleTimeoutMillis: 30_000 });
+    const pool = new pg.Pool({ ...poolSsl(opts.url), max: 10, idleTimeoutMillis: 30_000 });
     pool.on("error", (err) => logger.error({ err }, "postgres pool error"));
     const db = drizzlePg(pool, { schema }) as unknown as Db;
     return { db, driver: "postgres", close: () => pool.end() };

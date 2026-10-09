@@ -74,9 +74,9 @@ Scopes requested: `read:user notifications public_repo` (`repo` instead of `publ
 
 Every variable is documented in [.env.example](.env.example) and validated at startup (the app fails fast with a readable list).
 
-## Deploy as a website (free: Vercel + Neon + GitHub Actions)
+## Deploy as a website (free: Vercel + Supabase/Neon + GitHub Actions)
 
-1. **Neon** (https://neon.tech) → new project → copy the connection string (`postgres://…?sslmode=require`).
+1. **Supabase** (https://supabase.com) → new project → **Connect** → copy the **Session pooler** URI (port 5432) and fill in your DB password. (Neon works too: copy its connection string.)
 2. Push this repo to GitHub.
 3. **Vercel** (https://vercel.com) → Add New Project → import the repo → **Root Directory: `apps/web`** → add env vars:
    `DATABASE_URL`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET`, `TOKEN_ENCRYPTION_KEY`, `CRON_SECRET`, `ALLOWED_GITHUB_LOGIN=vidhisingh24`, `APP_URL=https://<app>.vercel.app` → Deploy.
