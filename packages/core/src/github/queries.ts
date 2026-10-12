@@ -65,7 +65,7 @@ export const PR_FIELDS = `
   ${COMMENTS}
   baseRefName headRefName additions deletions changedFiles mergeable mergeStateStatus reviewDecision
   participants(first: 20) { nodes { login } }
-  reviewRequests(first: 20) { nodes { requestedReviewer { __typename ... on User { login avatarUrl } ... on Bot { login } ... on Mannequin { login } ... on Team { slug } } } }
+  reviewRequests(first: 20) { nodes { requestedReviewer { __typename ... on User { login avatarUrl } ... on Bot { login } ... on Mannequin { login } } } }
   latestReviews(first: 20) { nodes { ${REVIEW} } }
   reviews(last: 40) { nodes { ${REVIEW} } }
   reviewThreads(first: 100) { totalCount nodes { isResolved } }
