@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getEnv } from "@contrib/core/env";
+import { getDb, getState } from "@contrib/core/db";
 import { Wordmark } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +15,14 @@ export default async function LoginPage({
   const env = getEnv();
   if (!env.authEnabled) redirect("/");
   const { error } = await searchParams;
+  const last = error
+    ? await getDb()
+        .then((db) =>
+          getState<{ at: string; type: string; message: string }>(db, "state.lastAuthError"),
+        )
+        .catch(() => null)
+    : null;
+  const recent = last && Date.now() - Date.parse(last.at) < 10 * 60_000 ? last : null;
   async function signInAction() {
     "use server";
     const { signIn } = await import("@/server/auth");
@@ -36,7 +45,7 @@ export default async function LoginPage({
           >
             {error === "AccessDenied"
               ? `Only @${env.ALLOWED_GITHUB_LOGIN} can sign in to this instance.`
-              : "Sign-in failed. Try again."}
+              : `Sign-in failed (${error}${recent ? ` · ${recent.type}: ${recent.message}` : ""}). Try again.`}
           </p>
         ) : null}
         <form action={signInAction} className="mt-6">

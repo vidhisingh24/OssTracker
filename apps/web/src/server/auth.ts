@@ -5,7 +5,7 @@ import { getEnv } from "@contrib/core/env";
 import { logger } from "@contrib/core/logger";
 import { saveGithubAccount } from "@contrib/core/github";
 import { isDemoSeeded, wipeData } from "@contrib/core/demo";
-import { getDb } from "@contrib/core/db";
+import { getDb, setState } from "@contrib/core/db";
 
 declare module "next-auth" {
   interface Session {
@@ -20,6 +20,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   session: { strategy: "jwt", maxAge: 30 * 24 * 3600 },
   pages: { signIn: "/login", error: "/login" },
+  logger: {
+    error(error) {
+      const cause = (error as Error & { cause?: { err?: unknown } }).cause?.err;
+      const detail = cause instanceof Error ? cause.message : error.message;
+      logger.error({ err: error, cause }, "auth error");
+      // Remember the last failure (message only, no stack/secrets) so the login page can show it.
+      void getDb()
+        .then((db) =>
+          setState(db, "state.lastAuthError", {
+            at: new Date().toISOString(),
+            type: error.name,
+            message: detail.replace(/gh[opusr]_[A-Za-z0-9]+/g, "[token]").slice(0, 300),
+          }),
+        )
+        .catch(() => undefined);
+    },
+  },
   providers: [
     GitHub({
       clientId: env.AUTH_GITHUB_ID,
@@ -39,8 +56,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.login = profile.login;
         if (account.access_token) {
           const db = await getDb();
-          // First real sign-in replaces demo data with the user's own.
-          if (await isDemoSeeded(db)) await wipeData(db);
+          // First real sign-in replaces demo data with the user's own. Never block login on it.
+          try {
+            if (await isDemoSeeded(db)) await wipeData(db);
+          } catch (err) {
+            logger.error({ err }, "could not clear demo data");
+          }
           await saveGithubAccount(db, {
             login: profile.login,
             name: typeof profile.name === "string" ? profile.name : null,
@@ -51,9 +72,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
           logger.info({ login: profile.login, scopes: account.scope }, "GitHub account connected");
           const { triggerSync } = await import("./sync");
-          await triggerSync(db, "cold").catch((err: unknown) =>
-            logger.warn({ err }, "could not start initial sync"),
-          );
+          try {
+            await triggerSync(db, "cold");
+          } catch (err) {
+            logger.warn({ err }, "could not start initial sync");
+          }
         }
       }
       return token;
