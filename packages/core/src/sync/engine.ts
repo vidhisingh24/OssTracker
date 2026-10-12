@@ -519,7 +519,13 @@ export async function runSync(db: Db, kind: SyncKind, opts: RunOptions = {}): Pr
     })
     .where(eq(syncRuns.id, runId));
   log.info(
-    { status, ...ctx.stats, cost: client.costSpent, errors: ctx.errors.length },
+    {
+      status,
+      ...ctx.stats,
+      cost: client.costSpent,
+      errors: ctx.errors.length,
+      errorDetails: ctx.errors.slice(0, 5),
+    },
     "sync run finished",
   );
   return { runId, status, ...ctx.stats, apiCost: client.costSpent, pollInterval, error: fatal };
