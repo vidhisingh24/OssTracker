@@ -31,11 +31,14 @@ const securityHeaders = [
 ];
 
 const config: NextConfig = {
-  output: "standalone",
+  // Standalone output only for Docker images; Vercel and local builds use the default.
+  output: process.env.NEXT_STANDALONE === "1" ? "standalone" : undefined,
   outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), "../.."),
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ["@contrib/core"],
+  // Ship SQL migrations with every server function (applied automatically on first request).
+  outputFileTracingIncludes: { "/**": ["../../packages/core/drizzle/**/*"] },
   serverExternalPackages: ["@electric-sql/pglite", "drizzle-orm", "pg-boss", "pino", "pg"],
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },

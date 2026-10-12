@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production DEMO_MODE=true
+ENV NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production DEMO_MODE=true NEXT_STANDALONE=1
 RUN pnpm --filter @contrib/web build
 
 # ── web: Next.js standalone server ──

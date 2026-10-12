@@ -46,6 +46,7 @@ export function findMigrationsFolder(): string {
     path.join(findRepoRoot(), "packages/core/drizzle"),
     path.join(process.cwd(), "drizzle"),
     path.join(process.cwd(), "packages/core/drizzle"),
+    path.join(process.cwd(), "../../packages/core/drizzle"),
   ].filter((p): p is string => Boolean(p));
   const found = candidates.find((p) => existsSync(path.join(p, "meta", "_journal.json")));
   if (!found) throw new Error(`Drizzle migrations not found (looked in: ${candidates.join(", ")})`);
