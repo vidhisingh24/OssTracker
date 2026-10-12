@@ -8,6 +8,11 @@ on:
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
+    inputs:
+      full:
+        description: "Run a full (cold) sync"
+        type: boolean
+        default: false
 
 jobs:
   sync:
@@ -18,8 +23,9 @@ jobs:
         env:
           APP_URL: ${{ secrets.APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          FULL: ${{ inputs.full && '1' || '0' }}
         run: |
           if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then echo "APP_URL / CRON_SECRET secrets not set, skipping"; exit 0; fi
-          code=$(curl -sS -o body.txt -w "%{http_code}" --max-time 320 -X POST -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/sync")
+          code=$(curl -sS -o body.txt -w "%{http_code}" --max-time 320 -X POST -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/sync?full=$FULL")
           cat body.txt; echo
           if [ "$code" != "200" ]; then echo "::error::sync endpoint returned HTTP $code"; exit 1; fi

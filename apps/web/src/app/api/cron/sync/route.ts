@@ -32,7 +32,9 @@ async function handle(req: NextRequest) {
   const ran: Record<string, string> = {};
 
   const lastCold = (await getState<{ at: string }>(db, "state.lastCold"))?.at;
-  const coldDue = !lastCold || now - Date.parse(lastCold) > settings.sync.coldHours * 3_600_000;
+  const forceFull = req.nextUrl.searchParams.get("full") === "1";
+  const coldDue =
+    forceFull || !lastCold || now - Date.parse(lastCold) > settings.sync.coldHours * 3_600_000;
   const lastWarm = (await getState<{ at: string }>(db, "state.lastWarmCron"))?.at;
   const warmDue = !lastWarm || now - Date.parse(lastWarm) > settings.sync.warmMinutes * 60_000;
 

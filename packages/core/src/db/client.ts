@@ -22,6 +22,8 @@ export type Executor = Db | Tx;
 interface DbHandle {
   db: Db;
   driver: "postgres" | "pglite";
+  /** Connected through a transaction-mode pooler (no session features). */
+  transactionPooler?: boolean;
   close: () => Promise<void>;
   ready: Promise<void>;
 }
@@ -88,12 +90,39 @@ function pgliteAssets(): { wasmModule?: WebAssembly.Module; fsBundle?: Blob } {
   };
 }
 
+/**
+ * Serverless functions open many short-lived pools. Supabase's session pooler (5432) caps total
+ * clients at the pool size, so on serverless we switch to its transaction pooler (6543), which
+ * multiplexes clients, and keep each instance's pool tiny.
+ */
+export function serverlessDbUrl(
+  url: string,
+  serverless = !!process.env.VERCEL,
+): { url: string; transactionPooler: boolean } {
+  try {
+    const u = new URL(url);
+    const supabasePooler = u.hostname.endsWith("pooler.supabase.com");
+    if (serverless && supabasePooler && (u.port === "5432" || u.port === "")) u.port = "6543";
+    return { url: u.toString(), transactionPooler: supabasePooler && u.port === "6543" };
+  } catch {
+    return { url, transactionPooler: false };
+  }
+}
+
 export function openDb(opts: { url?: string; pgliteDir?: string } = {}): Omit<DbHandle, "ready"> {
   if (opts.url) {
-    const pool = new pg.Pool({ ...poolSsl(opts.url), max: 10, idleTimeoutMillis: 30_000 });
+    const serverless = !!process.env.VERCEL;
+    const { url, transactionPooler } = serverlessDbUrl(opts.url, serverless);
+    const pool = new pg.Pool({
+      ...poolSsl(url),
+      max: serverless ? 3 : 10,
+      idleTimeoutMillis: serverless ? 5_000 : 30_000,
+      connectionTimeoutMillis: 15_000,
+      allowExitOnIdle: serverless,
+    });
     pool.on("error", (err) => logger.error({ err }, "postgres pool error"));
     const db = drizzlePg(pool, { schema }) as unknown as Db;
-    return { db, driver: "postgres", close: () => pool.end() };
+    return { db, driver: "postgres", transactionPooler, close: () => pool.end() };
   }
   const dir = opts.pgliteDir ?? path.join(findRepoRoot(), ".data", "pglite");
   if (dir !== "memory://") mkdirSync(dir, { recursive: true });
@@ -110,8 +139,14 @@ export async function migrateDb(handle: Omit<DbHandle, "ready">): Promise<void> 
     });
     return;
   }
-  // Serialize concurrent migrators (web + worker) with an advisory lock.
   const pgDb = handle.db as unknown as Parameters<typeof migratePg>[0];
+  // Session advisory locks don't work through a transaction pooler; migrations are idempotent
+  // (tracked in drizzle.__drizzle_migrations), so run them directly there.
+  if (handle.transactionPooler) {
+    await migratePg(pgDb, { migrationsFolder });
+    return;
+  }
+  // Serialize concurrent migrators (web + worker) with an advisory lock.
   const session = (handle.db as unknown as { $client: pg.Pool }).$client;
   const client = await session.connect();
   try {

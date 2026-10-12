@@ -1,0 +1,16 @@
+import { execSync } from "node:child_process";
+import { migrateDb, openDb } from "./src/db/client";
+import { GitHubClient } from "./src/github/client";
+import { runSync } from "./src/sync/engine";
+import { syncRuns, items } from "./src/db/schema";
+import { sql } from "drizzle-orm";
+const token = execSync("gh auth token").toString().trim();
+const h = openDb({ pgliteDir: "memory://" });
+await migrateDb(h);
+const client = new GitHubClient({ token });
+const res = await runSync(h.db, "cold", { client, me: "vidhisingh24", trigger: "test" });
+console.log(res);
+const [run] = await h.db.select().from(syncRuns);
+console.log(JSON.stringify(run?.errors, null, 1).slice(0, 3000));
+console.log(await h.db.execute(sql`select kind, state, count(*)::int n from items group by 1,2`));
+await h.close();

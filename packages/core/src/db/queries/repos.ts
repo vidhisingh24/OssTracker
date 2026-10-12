@@ -24,7 +24,16 @@ export interface RepoCard {
   myRole: string;
   isPlaceholder: boolean;
   stats: {
+    /** Issues/discussions you're involved in (any role). */
     issues: number;
+    /** Issues you opened, split by state. */
+    issuesOpened: number;
+    issuesOpenNow: number;
+    issuesClosed: number;
+    /** Pull requests you opened. */
+    prsOpened: number;
+    /** Others' PRs you reviewed. */
+    reviewed: number;
     openPrs: number;
     mergedPrs: number;
     closedPrs: number;
@@ -85,6 +94,9 @@ export async function listRepos(db: Executor, me: string): Promise<RepoCard[]> {
       const myPrs = mine.filter(
         (i) => i.kind === "pr" && i.author?.toLowerCase() === me.toLowerCase(),
       );
+      const myIssues = mine.filter(
+        (i) => i.kind !== "pr" && i.author?.toLowerCase() === me.toLowerCase(),
+      );
       const mergeHours = myPrs
         .filter((p) => p.merged && p.created)
         .map((p) => (p.merged!.getTime() - p.created!.getTime()) / 3_600_000);
@@ -125,6 +137,16 @@ export async function listRepos(db: Executor, me: string): Promise<RepoCard[]> {
         isPlaceholder: r.id.startsWith("repo:"),
         stats: {
           issues: mine.filter((i) => i.kind !== "pr").length,
+          issuesOpened: myIssues.length,
+          issuesOpenNow: myIssues.filter((i) => i.state === "open").length,
+          issuesClosed: myIssues.filter((i) => i.state !== "open").length,
+          prsOpened: myPrs.length,
+          reviewed: mine.filter(
+            (i) =>
+              i.kind === "pr" &&
+              i.author?.toLowerCase() !== me.toLowerCase() &&
+              i.relation.includes("reviewer"),
+          ).length,
           openPrs: myPrs.filter((p) => p.state === "open").length,
           mergedPrs: myPrs.filter((p) => p.state === "merged").length,
           closedPrs: myPrs.filter((p) => p.state === "closed").length,

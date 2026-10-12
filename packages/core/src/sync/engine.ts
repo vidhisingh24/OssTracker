@@ -461,7 +461,9 @@ export async function runSync(db: Db, kind: SyncKind, opts: RunOptions = {}): Pr
           (id) => !fresh.has(id),
         );
         await hydrate(ctx, ids, found, { initialImport: hadAny === 0 });
-        await setState(db, "state.lastCold", { at: now.toISOString() });
+        // Only a clean run counts; otherwise the next cron tick retries the full sync.
+        if (ctx.errors.length === 0)
+          await setState(db, "state.lastCold", { at: now.toISOString() });
         break;
       }
       case "hot": {

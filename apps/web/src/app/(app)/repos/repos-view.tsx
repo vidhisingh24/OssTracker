@@ -38,12 +38,34 @@ export function ReposView() {
   const { sp, set } = useUrlFilters();
   const openRepo = sp.get("repo");
   const selected = data?.find((r) => r.fullName.toLowerCase() === openRepo?.toLowerCase()) ?? null;
+  const layout = sp.get("view") === "cards" ? "cards" : "table";
 
   return (
     <div>
       <PageHeader
         title="Repos"
-        description="Where you contribute — your track record, who reviews you, and your own notes per project."
+        description="Where you contribute — per project: issues you opened, your PRs (open, merged, closed) and reviews."
+        actions={
+          <div
+            className="border-line bg-surface-2 inline-flex rounded-[10px] border p-0.5"
+            role="radiogroup"
+            aria-label="Layout"
+          >
+            {(["table", "cards"] as const).map((v) => (
+              <Button
+                key={v}
+                variant="ghost"
+                size="sm"
+                role="radio"
+                aria-checked={layout === v}
+                className={cn(layout === v && "bg-surface-1 text-ink shadow-sm")}
+                onClick={() => set({ view: v === "table" ? null : v })}
+              >
+                {v === "table" ? "By project" : "Cards"}
+              </Button>
+            ))}
+          </div>
+        }
       />
       {isLoading || !data ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -57,6 +79,8 @@ export function ReposView() {
             Repos appear after the first sync, or when you add an item by URL.
           </EmptyState>
         </Card>
+      ) : layout === "table" ? (
+        <ProjectTable repos={data} onOpen={(fullName) => set({ repo: fullName })} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {data.map((r) => (
@@ -424,5 +448,185 @@ function RepoDrawer({ repo }: { repo: RepoCard }) {
         </section>
       </div>
     </div>
+  );
+}
+
+type Tone = "success" | "info" | "neutral";
+
+function Num({ n, href, tone }: { n: number; href: string; tone?: Tone }) {
+  if (n === 0) return <span className="text-ink-subtle">0</span>;
+  return (
+    <Link
+      href={href}
+      onClick={(e) => e.stopPropagation()}
+      className={cn(
+        "tabular font-mono font-medium hover:underline",
+        tone === "success"
+          ? "text-success-fg"
+          : tone === "info"
+            ? "text-info-fg"
+            : tone === "neutral"
+              ? "text-ink-muted"
+              : "text-ink",
+      )}
+    >
+      {n}
+    </Link>
+  );
+}
+
+/** Project-wise breakdown: what you opened in each repo and where it stands. */
+function ProjectTable({
+  repos,
+  onOpen,
+}: {
+  repos: RepoCard[];
+  onOpen: (fullName: string) => void;
+}) {
+  const rows = repos.filter(
+    (r) =>
+      r.stats.issuesOpened + r.stats.prsOpened + r.stats.issues + r.stats.reviewed > 0 ||
+      r.isPlaceholder,
+  );
+  const keys = [
+    "issuesOpened",
+    "issuesOpenNow",
+    "issuesClosed",
+    "prsOpened",
+    "openPrs",
+    "mergedPrs",
+    "closedPrs",
+    "reviewed",
+  ] as const;
+  const totals = Object.fromEntries(
+    keys.map((k) => [k, rows.reduce((t, r) => t + r.stats[k], 0)]),
+  ) as Record<(typeof keys)[number], number>;
+  const link = (repo: string, q: string) =>
+    `/items?repo=${encodeURIComponent(repo)}&archived=include&${q}`;
+  const cell = "px-4 py-2.5 text-right";
+  const sep = "border-line border-l";
+  return (
+    <Card className="overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[880px] text-[13px]">
+          <thead className="border-line bg-surface-2/60 text-ink-subtle border-b text-left text-[11.5px] tracking-wide uppercase">
+            <tr>
+              <th rowSpan={2} className="px-4 py-2 font-medium">
+                Project
+              </th>
+              <th colSpan={3} className={`${sep} px-4 pt-2 text-center font-medium`}>
+                Issues you opened
+              </th>
+              <th colSpan={4} className={`${sep} px-4 pt-2 text-center font-medium`}>
+                Your pull requests
+              </th>
+              <th rowSpan={2} className={`${sep} px-4 py-2 text-right font-medium`}>
+                Reviewed
+              </th>
+              <th rowSpan={2} className="px-4 py-2 text-right font-medium">
+                Last activity
+              </th>
+            </tr>
+            <tr className="text-[11px]">
+              <th className={`${sep} px-4 pb-2 text-right font-medium`}>Total</th>
+              <th className="px-4 pb-2 text-right font-medium">Open</th>
+              <th className="px-4 pb-2 text-right font-medium">Closed</th>
+              <th className={`${sep} px-4 pb-2 text-right font-medium`}>Total</th>
+              <th className="px-4 pb-2 text-right font-medium">Open</th>
+              <th className="px-4 pb-2 text-right font-medium">Merged</th>
+              <th className="px-4 pb-2 text-right font-medium">Closed</th>
+            </tr>
+          </thead>
+          <tbody className="divide-line divide-y">
+            {rows.map((r) => (
+              <tr
+                key={r.id}
+                className="hover:bg-surface-2/50 cursor-pointer transition-colors"
+                onClick={() => onOpen(r.fullName)}
+              >
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar login={r.owner} size={22} className="rounded-[6px]" />
+                    <span className="font-mono text-[12.5px]">{r.fullName}</span>
+                    {r.meta?.pinned ? (
+                      <Pin className="text-accent size-3.5 fill-current" aria-label="Pinned" />
+                    ) : null}
+                    {r.stats.needsYou ? (
+                      <Chip size="xs" tone="attention">
+                        {r.stats.needsYou} need you
+                      </Chip>
+                    ) : null}
+                  </div>
+                </td>
+                <td className={`${sep} ${cell}`}>
+                  <Num
+                    n={r.stats.issuesOpened}
+                    href={link(r.fullName, "kind=issue&relation=author")}
+                  />
+                </td>
+                <td className={cell}>
+                  <Num
+                    n={r.stats.issuesOpenNow}
+                    href={link(r.fullName, "kind=issue&relation=author&state=open")}
+                    tone="info"
+                  />
+                </td>
+                <td className={cell}>
+                  <Num
+                    n={r.stats.issuesClosed}
+                    href={link(r.fullName, "kind=issue&relation=author&state=closed")}
+                    tone="neutral"
+                  />
+                </td>
+                <td className={`${sep} ${cell}`}>
+                  <Num n={r.stats.prsOpened} href={link(r.fullName, "kind=pr&relation=author")} />
+                </td>
+                <td className={cell}>
+                  <Num
+                    n={r.stats.openPrs}
+                    href={link(r.fullName, "kind=pr&relation=author&state=open")}
+                    tone="info"
+                  />
+                </td>
+                <td className={cell}>
+                  <Num
+                    n={r.stats.mergedPrs}
+                    href={link(r.fullName, "kind=pr&relation=author&state=merged")}
+                    tone="success"
+                  />
+                </td>
+                <td className={cell}>
+                  <Num
+                    n={r.stats.closedPrs}
+                    href={link(r.fullName, "kind=pr&relation=author&state=closed")}
+                    tone="neutral"
+                  />
+                </td>
+                <td className={`${sep} ${cell}`}>
+                  <Num n={r.stats.reviewed} href={link(r.fullName, "kind=pr&relation=reviewer")} />
+                </td>
+                <td className="text-ink-subtle tabular px-4 py-2.5 text-right">
+                  {r.stats.lastActivityAt ? relative(r.stats.lastActivityAt) : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot className="border-line bg-surface-2/40 border-t font-medium">
+            <tr>
+              <td className="px-4 py-2.5">All projects · {rows.length}</td>
+              {keys.map((k, i) => (
+                <td
+                  key={k}
+                  className={cn(cell, "tabular font-mono", (i === 0 || i === 3 || i === 7) && sep)}
+                >
+                  {totals[k]}
+                </td>
+              ))}
+              <td />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </Card>
   );
 }
