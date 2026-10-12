@@ -41,6 +41,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     GitHub({
       clientId: env.AUTH_GITHUB_ID,
       clientSecret: env.AUTH_GITHUB_SECRET,
+      // GitHub now returns `iss` on the OAuth callback; it must match exactly.
+      issuer: "https://github.com/login/oauth",
       authorization: { params: { scope: env.githubScopes.join(" ") } },
     }),
   ],

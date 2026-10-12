@@ -4,6 +4,8 @@ import { api, jsonBody } from "@/server/api";
 import { trackByUrl } from "@/server/sync";
 
 export const dynamic = "force-dynamic";
+// Inline (serverless) syncs run after the response via `after()` and need the long limit.
+export const maxDuration = 300;
 
 export const GET = api(async ({ db, req }) =>
   listItems(db, parseItemFilter(req.nextUrl.searchParams)),

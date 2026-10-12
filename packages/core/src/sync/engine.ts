@@ -447,7 +447,19 @@ export async function runSync(db: Db, kind: SyncKind, opts: RunOptions = {}): Pr
           )[0]?.n ?? 0;
         const since = new Date(now.getTime() - settings.sync.discoveryLookbackDays * 86_400_000);
         const found = await discover(ctx, { since, scope: "full" });
-        const ids = [...new Set([...found.keys(), ...(await openItemIds(db))])];
+        // Resumable on serverless time limits: items hydrated in the last 2h are skipped,
+        // so a cold run that was cut short continues where it stopped next time.
+        const fresh = new Set(
+          (
+            await db
+              .select({ id: items.id })
+              .from(items)
+              .where(gte(items.lastHydratedAt, new Date(now.getTime() - 2 * 3_600_000)))
+          ).map((r) => r.id),
+        );
+        const ids = [...new Set([...found.keys(), ...(await openItemIds(db))])].filter(
+          (id) => !fresh.has(id),
+        );
         await hydrate(ctx, ids, found, { initialImport: hadAny === 0 });
         await setState(db, "state.lastCold", { at: now.toISOString() });
         break;
