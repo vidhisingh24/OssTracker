@@ -252,8 +252,13 @@ function checksFrom(contexts: z.infer<typeof contextSchema>[]): CheckSnapshot[] 
 }
 
 /** Validate a raw GraphQL node and map it into the normalized snapshot. Returns null if unrecognized. */
+/** Postgres text columns reject NUL bytes; some bot comments contain them. */
+function stripNul<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value).replace(/\\u0000/g, "")) as T;
+}
+
 export function normalizeNode(raw: unknown): ItemSnapshot | null {
-  const parsed = anyNodeSchema.safeParse(raw);
+  const parsed = anyNodeSchema.safeParse(stripNul(raw));
   if (!parsed.success) return null;
   const n = parsed.data;
   const commentList = nodes(n.comments).map((c) => ({

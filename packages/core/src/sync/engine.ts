@@ -12,6 +12,14 @@ import type { Relation, Settings, SyncProgress } from "../types";
 import { buildSearchQueries, chunk, partitionWindows, windowQualifier } from "./discovery";
 import { markGone, persistSnapshot } from "./persist";
 
+/** Prefer the database's own message over Drizzle's "Failed query: <sql>" wrapper. */
+function errorText(err: unknown): string {
+  const e = err as Error & { cause?: { message?: string; code?: string } };
+  return e.cause?.message
+    ? `${e.cause.code ?? ""} ${e.cause.message}`.trim()
+    : (e.message ?? String(err)).slice(0, 300);
+}
+
 export type SyncKind = "hot" | "warm" | "cold" | "notifications" | "item" | "demo";
 
 export interface SyncContext {
@@ -166,7 +174,7 @@ export async function hydrate(
         } catch (err) {
           ctx.errors.push({
             scope: `persist:${snap.repo.fullName}#${snap.number}`,
-            message: (err as Error).message,
+            message: errorText(err),
           });
         }
       }
