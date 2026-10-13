@@ -9,6 +9,7 @@ import {
   repos,
   reviews,
   syncRuns,
+  settings,
 } from "../schema";
 import { dayKey, median, streaks } from "../../derive";
 
@@ -458,6 +459,8 @@ export interface SyncStatus {
   lastSuccessAt: string | null;
   lastRun: typeof syncRuns.$inferSelect | null;
   lastFailure: { at: string; kind: string; error: string | null } | null;
+  /** GitHub rejected the stored token (revoked / expired): the user must sign in again. */
+  needsReconnect: boolean;
   rate: { resource: string; limit: number; remaining: number; resetAt: string }[];
 }
 
@@ -499,10 +502,17 @@ export async function getSyncStatus(db: Executor): Promise<SyncStatus> {
     db.select().from(rateLimits),
   ]);
   const failed = lastFailure.find((r) => r.status === "failed");
+  const auth = await db
+    .select({ value: settings.value })
+    .from(settings)
+    .where(eq(settings.key, "state.githubAuth"))
+    .limit(1);
+  const needsReconnect = !!(auth[0]?.value as { invalid?: boolean } | undefined)?.invalid;
   return {
     running,
     lastSuccessAt: lastSuccess[0]?.at?.toISOString() ?? null,
     lastRun: lastRun[0] ?? null,
+    needsReconnect,
     lastFailure:
       failed && lastFailure[0]?.status === "failed"
         ? { at: failed.at.toISOString(), kind: failed.kind, error: failed.error }

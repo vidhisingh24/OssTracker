@@ -10,11 +10,11 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; reconnect?: string }>;
 }) {
   const env = getEnv();
   if (!env.authEnabled) redirect("/");
-  const { error } = await searchParams;
+  const { error, reconnect } = await searchParams;
   const last = error
     ? await getDb()
         .then((db) =>
@@ -34,7 +34,9 @@ export default async function LoginPage({
         <div className="flex justify-center">
           <Wordmark />
         </div>
-        <h1 className="mt-6 text-[22px] font-semibold">Welcome back</h1>
+        <h1 className="mt-6 text-[22px] font-semibold">
+          {reconnect ? "Reconnect GitHub" : "Welcome back"}
+        </h1>
         <p className="text-ink-muted mt-2 font-serif text-[15px]">
           Every issue, PR, review and CI result you're involved in — kept up to date automatically.
         </p>

@@ -129,7 +129,11 @@ export function SyncChip() {
                   style={{ width: `${Math.round(quotaPct! * 100)}%` }}
                 />
               </div>
-              <p className="text-ink-subtle mt-1 text-[11.5px]">Resets {relative(gql.resetAt)}</p>
+              <p className="text-ink-subtle mt-1 text-[11.5px]">
+                {Date.parse(gql.resetAt) > Date.now()
+                  ? `Resets ${relative(gql.resetAt)}`
+                  : "Quota has reset"}
+              </p>
             </div>
           ) : null}
           <div className="flex gap-2">

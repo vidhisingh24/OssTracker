@@ -64,6 +64,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           } catch (err) {
             logger.error({ err }, "could not clear demo data");
           }
+          await setState(db, "state.githubAuth", { invalid: false, at: new Date().toISOString() });
           await saveGithubAccount(db, {
             login: profile.login,
             name: typeof profile.name === "string" ? profile.name : null,

@@ -508,6 +508,12 @@ export async function runSync(db: Db, kind: SyncKind, opts: RunOptions = {}): Pr
     await linkOrphanNotifications(db);
   } catch (err) {
     fatal = err instanceof Error ? err.message : String(err);
+    if (err instanceof GitHubAuthError) {
+      fatal = "GitHub access was revoked or expired — reconnect GitHub";
+      await setState(db, "state.githubAuth", { invalid: true, at: new Date().toISOString() }).catch(
+        () => undefined,
+      );
+    }
     log.error({ err }, "sync run failed");
   }
 
